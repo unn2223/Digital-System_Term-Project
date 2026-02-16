@@ -1,57 +1,66 @@
 `timescale 1ns / 1ps
 
 module vga_controller_640_480(
-    input            pixel_clk,
-    input            rst,
-    output reg       hs,
-    output reg       vs,
-    output reg [10:0] hcount,
-    output reg [10:0] vcount,
-    output reg       blank
+    input  wire        pixel_clk,
+    input  wire        rst,
+    output reg         hs,
+    output reg         vs,
+    output reg  [10:0] hcount,
+    output reg  [10:0] vcount,
+    output reg         blank
 );
 
-    localparam HMAX   = 800;
-    localparam HLINES = 640;
-    localparam HFP    = 648;
-    localparam HSP    = 744;
+    // Keep your original timing numbers (only fix counter wrap points)
+    localparam [10:0] HMAX   = 11'd800;
+    localparam [10:0] HLINES = 11'd640;
+    localparam [10:0] HFP    = 11'd648;
+    localparam [10:0] HSP    = 11'd744;
 
-    localparam VMAX   = 525;
-    localparam VLINES = 480;
-    localparam VFP    = 482;
-    localparam VSP    = 484;
+    localparam [10:0] VMAX   = 11'd525;
+    localparam [10:0] VLINES = 11'd480;
+    localparam [10:0] VFP    = 11'd482;
+    localparam [10:0] VSP    = 11'd484;
 
-    always @(posedge pixel_clk) begin: h_count
-        if (rst || (hcount == HMAX))
-            hcount <= 0;
-        else
-            hcount <= hcount + 1;
-    end
+    localparam [10:0] HLAST = HMAX - 11'd1;
+    localparam [10:0] VLAST = VMAX - 11'd1;
 
+    // Horizontal counter: 0 .. HMAX-1
     always @(posedge pixel_clk) begin
-        if (rst)
-            hs <= 1'b1;
-        else
-            hs <= (hcount >= HFP && hcount < HSP) ? 1'b0 : 1'b1;
-    end
-
-    always @(posedge pixel_clk) begin: v_count
-        if (rst)
-            vcount <= 0;
-        else if (hcount == HMAX) begin
-            if (vcount == VMAX)
-                vcount <= 0;
-            else
-                vcount <= vcount + 1;
+        if (rst) begin
+            hcount <= 11'd0;
+        end else if (hcount == HLAST) begin
+            hcount <= 11'd0;
+        end else begin
+            hcount <= hcount + 11'd1;
         end
     end
 
+    // HS (active low)
     always @(posedge pixel_clk) begin
-        if (rst)
-            vs <= 1'b1;
-        else if (hcount == HMAX - 1)
-            vs <= (vcount >= VFP && vcount < VSP) ? 1'b0 : 1'b1;
+        if (rst) hs <= 1'b1;
+        else     hs <= (hcount >= HFP && hcount < HSP) ? 1'b0 : 1'b1;
     end
 
+    // Vertical counter increments at end of each line
+    always @(posedge pixel_clk) begin
+        if (rst) begin
+            vcount <= 11'd0;
+        end else if (hcount == HLAST) begin
+            if (vcount == VLAST) vcount <= 11'd0;
+            else                 vcount <= vcount + 11'd1;
+        end
+    end
+
+    // VS (active low) - update once per line at end-of-line
+    always @(posedge pixel_clk) begin
+        if (rst) begin
+            vs <= 1'b1;
+        end else if (hcount == HLAST) begin
+            vs <= (vcount >= VFP && vcount < VSP) ? 1'b0 : 1'b1;
+        end
+    end
+
+    // blank: 0 in visible area, 1 outside
     always @(posedge pixel_clk) begin
         blank <= ((hcount < HLINES) && (vcount < VLINES)) ? 1'b0 : 1'b1;
     end
