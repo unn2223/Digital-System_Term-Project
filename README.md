@@ -1,4 +1,5 @@
 # FPGA Pacman-like Game (VGA 640x480)
+<img width="405.2" height="338" alt="image" src="https://github.com/user-attachments/assets/46f2114c-7000-490b-acfe-c8dcba352e3d" />
 
 ## 프로젝트 소개
 Verilog로 만든 간단한 Pac-Man 스타일 게임입니다.
